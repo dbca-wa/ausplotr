@@ -1,8 +1,20 @@
 ## Libraries
-if (!require("pacman")) install.packages("pacman")
-pacman::p_load("shiny", "readr", "dplyr", "tidyr", "stringr", "lubridate",
-               "leaflet", "RSQLite", "DT")
+# if (!require("pacman")) install.packages("pacman")
+# pacman::p_load("shiny", "readr", "dplyr", "tidyr", "stringr", "lubridate",
+#                "leaflet", "RSQLite", "DT", "markdown", update=T)
 
+library(RSQLite)
+
+#' Extract data from a raw Ausplot SQLite .db file
+#'
+#' Species Records are joined with transect point, transect, and plot details.
+#' Vouchered Vegetation records are joined with plot details.
+#' Transect records are joined with plot details, plus a column "popup" is added
+#' containing HTML for a map popup.
+#'
+#' Returns a list of three data frames.
+#'
+#' @param f A file path, such as RShiny's input$infile$datapath
 get_data <- function(f){
     require(RSQLite)
     con <- dbConnect(RSQLite::SQLite(), dbname=f)
