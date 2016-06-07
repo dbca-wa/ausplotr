@@ -1,9 +1,11 @@
 ## Libraries
 # if (!require("pacman")) install.packages("pacman")
 # pacman::p_load("shiny", "readr", "dplyr", "tidyr", "stringr", "lubridate",
-#                "RSQLite", "DT", "markdown", update=T)
+               # "RSQLite", "DT", "markdown", update=T)
 # devtools::install_github('rstudio/leaflet')
 library(RSQLite)
+library(tidyr)
+library(dplyr)
 
 #' Extract data from a raw Ausplot SQLite .db file
 #'
@@ -74,6 +76,21 @@ get_data <- function(f){
 #       '<p><strong>Physical Status</strong>', tx$physicalStatusComments, '</p>'
       )
 
-    data <- list(species_records=sr, vouchered_vegetation=vv, transects=tx)
+    tp <- dplyr::tbl_df(sr) %>%
+      dplyr::group_by(plotName, transectId, fieldName) %>%
+      dplyr::tally(sort=T) %>%
+      tidyr::spread(fieldName, n) %>%
+      dplyr::left_join(tx, by="transectId")
+
+    pp <- dplyr::tbl_df(sr) %>%
+      dplyr::group_by(plotName, fieldName) %>%
+      dplyr::tally(sort=T) %>%
+      tidyr::spread(fieldName, n)
+
+    data <- list(species_records=sr,
+                 vouchered_vegetation=vv,
+                 transects=tx,
+                 transect_profiles=tp,
+                 site_profiles=pp)
     data
 }

@@ -24,6 +24,8 @@ shinyUI(
              ) # div.outer
     ), # tabPanel Map
 
+    tabPanel("Site Profiles", DT::dataTableOutput("table_sp")),
+    tabPanel("Transect Profiles", DT::dataTableOutput("table_tp")),
     tabPanel("Species Records", DT::dataTableOutput("table_sr")),
     tabPanel("Vouchered Vegetation", DT::dataTableOutput("table_vv")),
     tabPanel("Transects", DT::dataTableOutput("table_tx")),

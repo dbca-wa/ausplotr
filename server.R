@@ -12,6 +12,8 @@ shinyServer(
       get_data(input$infile$datapath)
     })
 
+    output$table_sp <- DT::renderDataTable(data()$site_profiles, filter="top")
+    output$table_tp <- DT::renderDataTable(data()$transect_profiles, filter="top")
     output$table_sr <- DT::renderDataTable(data()$species_records, filter="top")
     output$table_vv <- DT::renderDataTable(data()$vouchered_vegetation, filter="top")
     output$table_tx <- DT::renderDataTable(data()$transects, filter="top")
@@ -19,21 +21,37 @@ shinyServer(
     # Map object --------------------------------------------------------------#
     output$map <- renderLeaflet({
       if (is.null(data())) return(NULL)
-      leaflet(data()$transects) %>%
+      leaflet(data()$transect_profiles) %>%
         addTiles(
           urlTemplate="//{s}.tiles.mapbox.com/v3/jcheng.map-5ebohr46/{z}/{x}/{y}.png",
           attribution='Maps by <a href="http://www.mapbox.com/">Mapbox</a>') %>%
         addScaleBar(position="bottomleft") %>%
         setView(lng = 120, lat = -25, zoom = 5) %>%
         addMiniMap(toggleDisplay=T) %>%
-        addMarkers(data()$transects$lon, data()$transects$lat,
-                          label=data()$transects$name, clusterOptions=T,
-                          popup=data()$transects$popup,
-                          options=markerOptions(popupOptions(maxHeight = 150)))
+        addMarkers(data()$transect_profiles$lon,
+                   data()$transect_profiles$lat,
+                   label=data()$transect_profiles$name,
+                   popup=data()$transect_profiles$popup,
+                   clusterOptions=T,
+                   options=markerOptions(popupOptions(maxHeight = 150)))
 
     })
 
     # Dataframe to CSV --------------------------------------------------------#
+    output$download_sp <- downloadHandler(
+      filename = function() {
+        paste0(input$infile$name, '-site_profiles.csv') },
+      content = function(file) {
+        write.csv(data()$site_profiles, file, row.names = F)}
+    )
+
+    output$download_tp <- downloadHandler(
+      filename = function() {
+        paste0(input$infile$name, '-transect_profiles.csv') },
+      content = function(file) {
+        write.csv(data()$transect_profiles, file, row.names = F)}
+    )
+
     output$download_sr <- downloadHandler(
       filename = function() {
         paste0(input$infile$name, '-species_records.csv')},
@@ -60,6 +78,8 @@ shinyServer(
       if (is.null(data())) return(NULL)
       wellPanel(
         h3("Download CSV"),
+        downloadButton('download_sp', 'Site profiles'),
+        downloadButton('download_tp', 'Transect profiles'),
         downloadButton('download_sr', 'Species records'),
         downloadButton('download_vv', 'Vouchered vegetation'),
         downloadButton('download_tx', 'Transects')
