@@ -1,6 +1,6 @@
 source("global.R")
-library(shiny)
 library(DT)
+library(shiny)
 library(leaflet)
 
 shinyServer(
@@ -12,15 +12,9 @@ shinyServer(
       get_data(input$infile$datapath)
     })
 
-    output$table_sr <- DT::renderDataTable(
-      DT::datatable(data()$species_records, filter="top")
-    )
-    output$table_vv <- DT::renderDataTable(
-      DT::datatable(data()$vouchered_vegetation, filter="top")
-    )
-    output$table_tx <- DT::renderDataTable(
-      DT::datatable(data()$transects, filter="top")
-    )
+    output$table_sr <- DT::renderDataTable(data()$species_records, filter="top")
+    output$table_vv <- DT::renderDataTable(data()$vouchered_vegetation, filter="top")
+    output$table_tx <- DT::renderDataTable(data()$transects, filter="top")
 
     # Map object --------------------------------------------------------------#
     output$map <- renderLeaflet({
@@ -32,7 +26,7 @@ shinyServer(
         addScaleBar(position="bottomleft") %>%
         setView(lng = 120, lat = -25, zoom = 5) %>%
         addMiniMap(toggleDisplay=T) %>%
-        addAwesomeMarkers(data()$transects$lon, data()$transects$lat,
+        addMarkers(data()$transects$lon, data()$transects$lat,
                           label=data()$transects$name, clusterOptions=T,
                           popup=data()$transects$popup,
                           options=markerOptions(popupOptions(maxHeight = 150)))
