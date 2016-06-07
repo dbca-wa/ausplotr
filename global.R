@@ -1,24 +1,12 @@
-# install.packages("downloader")
-# install.packages("RSQLite")
-# devtools::install_github("rstudio/leaflet")
-# installed.packages("rio")
-
-## Download and extract .zip archives
-# library(downloader)
-# download(url, dest="dataset.zip", mode="wb")
-# unzip("dataset.zip", exdir = "./")
-
 ## Libraries
-library(readr)
-library(dplyr)
-library(tidyr)
-library(stringr)
-library(lubridate)
-library(leaflet)
-library(RSQLite)
-# if (!require("DT")) install.packages('DT')
-
-
+if (!require("readr")) install.packages('readr')
+if (!require("dplyr")) install.packages('dplyr')
+if (!require("tidyr")) install.packages('tidyr')
+if (!require("stringr")) install.packages('stringr')
+if (!require("lubridate")) install.packages('lubridate')
+if (!require("leaflet")) install.packages('leaflet')
+if (!require("RSQLite")) install.packages('RSQLite')
+if (!require("DT")) install.packages('DT')
 
 get_data <- function(f){
     require(RSQLite)
@@ -45,9 +33,3 @@ get_data <- function(f){
     data <- list(species_records=sr, vouchered_vegetation=vv, transects=tx)
     data
 }
-
-
-
-# d <- get_data("data/WAA COO 0001_dump_sqlite_222726_662013.db")
-
-

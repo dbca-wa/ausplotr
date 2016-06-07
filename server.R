@@ -4,9 +4,9 @@
 #
 # http://shiny.rstudio.com
 #
+source("global.R")
 library(shiny)
 library(leaflet)
-source("global.R")
 
 shinyServer(
   function(input, output){
