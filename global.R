@@ -1,12 +1,7 @@
 ## Libraries
-if (!require("readr")) install.packages('readr')
-if (!require("dplyr")) install.packages('dplyr')
-if (!require("tidyr")) install.packages('tidyr')
-if (!require("stringr")) install.packages('stringr')
-if (!require("lubridate")) install.packages('lubridate')
-if (!require("leaflet")) install.packages('leaflet')
-if (!require("RSQLite")) install.packages('RSQLite')
-if (!require("DT")) install.packages('DT')
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load("shiny", "readr", "dplyr", "tidyr", "stringr", "lubridate",
+               "leaflet", "RSQLite", "DT")
 
 get_data <- function(f){
     require(RSQLite)
