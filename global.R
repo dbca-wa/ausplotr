@@ -1,8 +1,8 @@
 ## Libraries
 # if (!require("pacman")) install.packages("pacman")
 # pacman::p_load("shiny", "readr", "dplyr", "tidyr", "stringr", "lubridate",
-#                "leaflet", "RSQLite", "DT", "markdown", update=T)
-devtools::install_github('rstudio/leaflet')
+#                "RSQLite", "DT", "markdown", update=T)
+# devtools::install_github('rstudio/leaflet')
 library(RSQLite)
 
 #' Extract data from a raw Ausplot SQLite .db file
