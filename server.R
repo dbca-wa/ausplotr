@@ -29,7 +29,7 @@ shinyServer(
         addTiles(
           urlTemplate="//{s}.tiles.mapbox.com/v3/jcheng.map-5ebohr46/{z}/{x}/{y}.png",
           attribution='Maps by <a href="http://www.mapbox.com/">Mapbox</a>') %>%
-        addScaleBar(position="bottomleft") %>%
+        # addScaleBar(position="bottomleft") %>%
         setView(lng = 120, lat = -25, zoom = 5) %>%
         addMiniMap(toggleDisplay=T) %>%
         addAwesomeMarkers(data()$transects$lon, data()$transects$lat,
