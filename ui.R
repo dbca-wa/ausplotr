@@ -24,9 +24,9 @@ shinyUI(
              ) # div.outer
     ), # tabPanel Map
 
-    tabPanel("Species Records", dataTableOutput("table_sr")),
-    tabPanel("Vouchered Vegetation", dataTableOutput("table_vv")),
-    tabPanel("Transects", dataTableOutput("table_tx")),
+    tabPanel("Species Records", DT::dataTableOutput("table_sr")),
+    tabPanel("Vouchered Vegetation", DT::dataTableOutput("table_vv")),
+    tabPanel("Transects", DT::dataTableOutput("table_tx")),
     tabPanel("Help", includeMarkdown("README.md"))
   )
 )

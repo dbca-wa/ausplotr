@@ -20,7 +20,8 @@ SELECT * FROM voucheredVeg AS vv LEFT JOIN plots AS pl ON vv.plotId = pl.id;
 -- transects
 SELECT * FROM transects AS tx LEFT JOIN plots AS pl ON tx.plotId = pl.id;
 ```
-
+AusplotR runs the same queries behind the scenes, but selects the fields 
+explicitly and ignores duplicate columns from joins.
 
 ### License
 [![license](https://i.creativecommons.org/l/by-sa/4.0/88x31.png)](http://creativecommons.org/licenses/by-sa/4.0/)

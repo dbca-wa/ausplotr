@@ -1,5 +1,6 @@
 source("global.R")
 library(shiny)
+library(DT)
 library(leaflet)
 
 shinyServer(
@@ -11,9 +12,27 @@ shinyServer(
       get_data(input$infile$datapath)
     })
 
-    output$table_sr <- renderDataTable({data()$species_records})
-    output$table_vv <- renderDataTable({data()$vouchered_vegetation})
-    output$table_tx <- renderDataTable({data()$transects})
+    output$table_sr <- DT::renderDataTable(
+      DT::datatable(data()$species_records,
+                    filter="top",
+                    options=list(autoWidth=T,
+                                 columnDefs=list(list(width='400px', targets="_all"))))
+
+    )
+    output$table_vv <- DT::renderDataTable(
+      DT::datatable(data()$vouchered_vegetation,
+                    filter="top",
+                    options=list(autoWidth=T,
+                                 columnDefs=list(list(width='400px', targets="_all"))))
+
+    )
+    output$table_tx <- DT::renderDataTable(
+      DT::datatable(data()$transects,
+                    filter="top",
+                    options=list(autoWidth=T,
+                                 columnDefs=list(list(width='400px', targets="_all"))))
+
+    )
 
     # Map object --------------------------------------------------------------#
     output$map <- renderLeaflet({
