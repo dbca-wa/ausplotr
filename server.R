@@ -18,17 +18,18 @@ shinyServer(
     # Map object --------------------------------------------------------------#
     output$map <- renderLeaflet({
       if (is.null(data())) return(NULL)
-      leaflet() %>%
-        leaflet(data()$transects) %>%
-        addTiles(urlTemplate = paste0("//{s}.tiles.mapbox.com/v3/jcheng.map",
-                                      "-5ebohr46/{z}/{x}/{y}.png"),
-                 attribution = paste0('Maps by <a href="http://www.mapbox.com/',
-                                      '">Mapbox</a>')) %>%
+      leaflet(data()$transects) %>%
+        addTiles(
+          urlTemplate="//{s}.tiles.mapbox.com/v3/jcheng.map-5ebohr46/{z}/{x}/{y}.png",
+          attribution='Maps by <a href="http://www.mapbox.com/">Mapbox</a>') %>%
         addScaleBar(position="bottomleft") %>%
         setView(lng = 120, lat = -25, zoom = 5) %>%
+        addMiniMap(toggleDisplay=T) %>%
         addAwesomeMarkers(data()$transects$lon, data()$transects$lat,
                           label=data()$transects$name, clusterOptions=T,
-                          popup=data()$transects$popup)
+                          popup=data()$transects$popup,
+                          options=markerOptions(popupOptions(maxHeight = 150)))
+
     })
 
     # Dataframe to CSV --------------------------------------------------------#

@@ -1,6 +1,6 @@
 library(shiny)
-library(markdown)
 library(leaflet)
+library(markdown)
 
 shinyUI(
   navbarPage(
