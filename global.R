@@ -77,10 +77,3 @@ get_data <- function(f){
     data <- list(species_records=sr, vouchered_vegetation=vv, transects=tx)
     data
 }
-
-
-# d <- get_data("data/WAA COO 0001_dump_sqlite_222726_662013.db")
-# DT::datatable(d$species_records, filter="top",
-#               options=list(autoWidth=T,
-#                            columnDefs = list(list(width='200px', targets=list(25,26))))
-#               )

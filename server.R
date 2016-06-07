@@ -13,25 +13,13 @@ shinyServer(
     })
 
     output$table_sr <- DT::renderDataTable(
-      DT::datatable(data()$species_records,
-                    filter="top",
-                    options=list(autoWidth=T,
-                                 columnDefs=list(list(width='400px', targets="_all"))))
-
+      DT::datatable(data()$species_records, filter="top")
     )
     output$table_vv <- DT::renderDataTable(
-      DT::datatable(data()$vouchered_vegetation,
-                    filter="top",
-                    options=list(autoWidth=T,
-                                 columnDefs=list(list(width='400px', targets="_all"))))
-
+      DT::datatable(data()$vouchered_vegetation, filter="top")
     )
     output$table_tx <- DT::renderDataTable(
-      DT::datatable(data()$transects,
-                    filter="top",
-                    options=list(autoWidth=T,
-                                 columnDefs=list(list(width='400px', targets="_all"))))
-
+      DT::datatable(data()$transects, filter="top")
     )
 
     # Map object --------------------------------------------------------------#
