@@ -12,21 +12,23 @@ shinyServer(
       get_data(input$infile$datapath)
     })
 
-    output$table_sp <- DT::renderDataTable(data()$site_profiles, filter="top")
-    output$table_tp <- DT::renderDataTable(data()$transect_profiles, filter="top")
-    output$table_sr <- DT::renderDataTable(data()$species_records, filter="top")
-    output$table_vv <- DT::renderDataTable(data()$vouchered_vegetation, filter="top")
-    output$table_tx <- DT::renderDataTable(data()$transects, filter="top")
-    output$table_si <- DT::renderDataTable(data()$sites, filter="top")
+    output$table_sp <- make_dt(data()$site_profiles)
+    output$table_tp <- make_dt(data()$transect_profiles)
+    output$table_sr <- make_dt(data()$species_records)
+    output$table_bw <- make_dt(data()$basal_wedge)
+    output$table_vv <- make_dt(data()$vouchered_vegetation)
+    output$table_tx <- make_dt(data()$transects)
+    output$table_si <- make_dt(data()$sites)
 
     # Map object --------------------------------------------------------------#
     output$map <- renderLeaflet({
       if (is.null(data())) return(NULL)
       leaflet(data()$transects_sites) %>%
-        addTiles(
-          urlTemplate="//{s}.tiles.mapbox.com/v3/jcheng.map-5ebohr46/{z}/{x}/{y}.png",
-          attribution='Maps by <a href="http://www.mapbox.com/">Mapbox</a>') %>%
-        addScaleBar(position="bottomleft") %>%
+        # Provider tiles: pick any from
+        # http://leaflet-extras.github.io/leaflet-providers/preview/index.html
+        addProviderTiles("MapQuestOpen.Aerial") %>%
+        # addProviderTiles("Esri.WorldImagery") %>%
+        # addProviderTiles("HERE.hybridDay") %>%
         setView(lng = 120, lat = -25, zoom = 5) %>%
         addMiniMap(toggleDisplay=T) %>%
         addMarkers(data()$transects_sites$lon,
@@ -58,11 +60,18 @@ shinyServer(
         write.csv(data()$species_records, file, row.names = F)}
     )
 
+    output$download_bw <- downloadHandler(
+      filename = function() {
+        paste0(input$infile$name, '-basal_wedge.csv')},
+      content = function(file) {
+        write.csv(data()$basal_wedge, file, row.names = F)}
+    )
+
     output$download_vv <- downloadHandler(
       filename = function() {
         paste0(input$infile$name, '-vouchered_vegetation.csv') },
       content = function(file) {
-        write.csv(data()$vouchered_vegetation_sites, file, row.names = F)}
+        write.csv(data()$vouchered_vegetation, file, row.names = F)}
     )
 
     output$download_tx <- downloadHandler(
@@ -77,10 +86,11 @@ shinyServer(
       if (is.null(data())) return(NULL)
       wellPanel(
         h3("Download CSV"),
-        downloadButton('download_sp', 'Site profiles'),
-        downloadButton('download_tp', 'Transect profiles'),
-        downloadButton('download_sr', 'Species records'),
-        downloadButton('download_vv', 'Vouchered vegetation'),
+        downloadButton('download_sp', 'Site Profiles'),
+        downloadButton('download_tp', 'Transect Profiles'),
+        downloadButton('download_sr', 'Species Records'),
+        downloadButton('download_bw', 'Basal Wedge'),
+        downloadButton('download_vv', 'Vouchered Vegetation'),
         downloadButton('download_tx', 'Transects and Sites')
       )
     })

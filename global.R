@@ -7,6 +7,8 @@ library(RSQLite)
 library(tidyr)
 library(dplyr)
 library(lubridate)
+library(shiny)
+library(DT)
 
 #' Extract data from a raw Ausplot SQLite .db file
 #'
@@ -41,8 +43,11 @@ get_data <- function(f){
       pl.outcropLithology, pl.outcropSubLithology, pl.surfaceStrewSize,
       pl.surfaceStrewLithology, pl.plotDimension100x100, pl.plotDimensionX,
       pl.plotDimensionY, pl.climaticConditions, pl.vegetationConditions,
-      pl.physicalStatusComments
-      FROM plots AS pl') %>%
+      pl.physicalStatusComments,
+      ss.upper1, ss.upper2, ss.upper3, ss.middle1, ss.middle2, ss.middle3,
+      ss.lower1, ss.lower2, ss.lower3, ss.massFloweringEventEvidence
+      FROM plots AS pl
+      LEFT JOIN sitesummary AS ss ON pl.id = ss.plotId') %>%
       mutate(plotCompletionDateTime=paste(completionDate, completionTime)) %>%
       mutate(plotCompletionDateTime=parse_date_time(
         plotCompletionDateTime, orders=c("YmdHMS"), tz="Australia/Perth")) %>%
@@ -72,16 +77,18 @@ get_data <- function(f){
       left_join(tx_simple, by="transectId") %>%
       left_join(pl_simple, by="plotId") %>% tbl_df()
 
-    # vouchered vegetation
-    vv <- dbGetQuery(con, 'SELECT * FROM voucheredVeg') %>% tbl_df()
+    # vouchered vegetation with basic site details
+    vv <- dbGetQuery(con, 'SELECT * FROM voucheredVeg') %>%
+      left_join(pl_simple, by="plotId") %>% tbl_df()
 
-    # vv with site details
-    vs <- vv %>% left_join(pl, by="plotId") %>% tbl_df()
+    # basal wedge with basic site details
+    bw = dbGetQuery(con, 'SELECT * FROM bwRecords') %>%
+      left_join(pl_simple, by="plotId") %>% tbl_df()
 
-    # transects with site details
+    # transects with full site details
     ts <- tx_simple %>% left_join(pl, by="plotId") %>% tbl_df()
 
-    # add HTML popup content
+    # add HTML popup content to transects
     ts$popup = paste(
         '<h3>', ts$plotName, '-', ts$transectId,  '</h3>',
         '<p><strong>Observed by</strong>',
@@ -106,12 +113,25 @@ get_data <- function(f){
 
 
     data <- list(species_records=sr,
+                 basal_wedge=bw,
                  vouchered_vegetation=vv,
-                 vouchered_vegetation_sites=vs,
                  transects=tx,
                  transect_profiles=tp,
                  transects_sites=ts,
                  sites=pl,
                  site_profiles=sp)
     data
+}
+
+#' Prepare a DT datatable with sensible defaults
+make_dt <- function(x, filter="top", pageLength=50){
+  out <- DT::renderDataTable(
+    DT::datatable(x,
+                  filter=filter,
+                  options=list(pageLength = pageLength,
+                               autoWidth = TRUE,
+                               columnDefs = list(list(width='500px',
+                                                      targets=c("plotComment")))
+    )))
+  out
 }
