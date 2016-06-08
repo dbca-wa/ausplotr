@@ -17,24 +17,23 @@ shinyServer(
     output$table_sr <- DT::renderDataTable(data()$species_records, filter="top")
     output$table_vv <- DT::renderDataTable(data()$vouchered_vegetation, filter="top")
     output$table_tx <- DT::renderDataTable(data()$transects, filter="top")
+    output$table_si <- DT::renderDataTable(data()$sites, filter="top")
 
     # Map object --------------------------------------------------------------#
     output$map <- renderLeaflet({
       if (is.null(data())) return(NULL)
-      leaflet(data()$transect_profiles) %>%
+      leaflet(data()$transects_sites) %>%
         addTiles(
           urlTemplate="//{s}.tiles.mapbox.com/v3/jcheng.map-5ebohr46/{z}/{x}/{y}.png",
           attribution='Maps by <a href="http://www.mapbox.com/">Mapbox</a>') %>%
         addScaleBar(position="bottomleft") %>%
         setView(lng = 120, lat = -25, zoom = 5) %>%
         addMiniMap(toggleDisplay=T) %>%
-        addMarkers(data()$transect_profiles$lon,
-                   data()$transect_profiles$lat,
-                   label=data()$transect_profiles$name,
-                   popup=data()$transect_profiles$popup,
-                   clusterOptions=T,
-                   options=markerOptions(popupOptions(maxHeight = 150)))
-
+        addMarkers(data()$transects_sites$lon,
+                   data()$transects_sites$lat,
+                   label=data()$transects_sites$name,
+                   popup=data()$transects_sites$popup,
+                   clusterOptions=T)
     })
 
     # Dataframe to CSV --------------------------------------------------------#
@@ -63,14 +62,14 @@ shinyServer(
       filename = function() {
         paste0(input$infile$name, '-vouchered_vegetation.csv') },
       content = function(file) {
-        write.csv(data()$vouchered_vegetation, file, row.names = F)}
+        write.csv(data()$vouchered_vegetation_sites, file, row.names = F)}
     )
 
     output$download_tx <- downloadHandler(
       filename = function() {
         paste0(input$infile$name, '-transects.csv') },
       content = function(file) {
-        write.csv(data()$transects, file, row.names = F)}
+        write.csv(data()$transects_sites, file, row.names = F)}
     )
 
     # Download panel ----------------------------------------------------------#
@@ -82,9 +81,12 @@ shinyServer(
         downloadButton('download_tp', 'Transect profiles'),
         downloadButton('download_sr', 'Species records'),
         downloadButton('download_vv', 'Vouchered vegetation'),
-        downloadButton('download_tx', 'Transects')
+        downloadButton('download_tx', 'Transects and Sites')
       )
     })
 
+    output$upload <- renderUI({
+      fileInput('infile', multiple=F, label = 'Open AusPlot .db file')
+    })
   }
 )

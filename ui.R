@@ -18,7 +18,7 @@ shinyUI(
                    width = 280, height = "auto",
 
                    h3("Upload .db"),
-                   fileInput('infile', label = 'Open AusPlot .db file'),
+                   uiOutput("upload"),
                    uiOutput("download")
                  ) # absolutePanel
              ) # div.outer
@@ -29,6 +29,7 @@ shinyUI(
     tabPanel("Species Records", DT::dataTableOutput("table_sr")),
     tabPanel("Vouchered Vegetation", DT::dataTableOutput("table_vv")),
     tabPanel("Transects", DT::dataTableOutput("table_tx")),
+    tabPanel("Sites", DT::dataTableOutput("table_si")),
     tabPanel("Help", includeMarkdown("README.md"))
   )
 )
