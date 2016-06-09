@@ -12,6 +12,17 @@ shinyServer(
       get_data(input$infile$datapath)
     })
 
+    output$siteSelector <- renderUI({
+      if (is.null(data())) return(NULL)
+      selectInput("sitepicker", "Show Site", c("All", data()$sites$plotName))
+    })
+
+    filteredData <- reactive({
+      if (is.null(data())) return(NULL)
+      d <- get_filtered_data(data(), pn=input$sitepicker)
+      d
+    })
+
     output$table_sp <- make_dt(data()$site_profiles)
     output$table_tp <- make_dt(data()$transect_profiles)
     output$table_sr <- make_dt(data()$species_records)
@@ -22,21 +33,34 @@ shinyServer(
 
     # Map object --------------------------------------------------------------#
     output$map <- renderLeaflet({
-      if (is.null(data())) return(NULL)
       leaflet(data()$transects_sites) %>%
         # Provider tiles: pick any from
         # http://leaflet-extras.github.io/leaflet-providers/preview/index.html
-        addProviderTiles("MapQuestOpen.Aerial") %>%
-        # addProviderTiles("Esri.WorldImagery") %>%
-        # addProviderTiles("HERE.hybridDay") %>%
+        addProviderTiles("OpenStreetMap.Mapnik") %>%
+        addProviderTiles("Esri.WorldImagery",
+                         options=providerTileOptions(opacity=0.8)) %>%
         setView(lng = 120, lat = -25, zoom = 5) %>%
         addMiniMap(toggleDisplay=T) %>%
-        addMarkers(data()$transects_sites$lon,
-                   data()$transects_sites$lat,
-                   label=data()$transects_sites$name,
-                   popup=data()$transects_sites$popup,
+        clearShapes() %>%
+        addMarkers(d$transects_sites$lon,
+                   d$transects_sites$lat,
+                   label=d$transects_sites$name,
+                   popup=d$transects_sites$popup,
                    clusterOptions=T)
     })
+
+    # react to "Show Site"
+    observeEvent(input$sitepicker, {
+      if (is.null(filteredData())) return(NULL)
+      print(input$sitepicker)
+      print(min(filteredData()$sites$lon))
+      leafletProxy("map") %>%
+        fitBounds(min(filteredData()$sites$lon),
+                  min(filteredData()$sites$lat),
+                  max(filteredData()$sites$lon),
+                  max(filteredData()$sites$lat))
+    })
+
 
     # Dataframe to CSV --------------------------------------------------------#
     output$download_sp <- downloadHandler(
@@ -96,7 +120,7 @@ shinyServer(
     })
 
     output$upload <- renderUI({
-      fileInput('infile', multiple=F, label = 'Open AusPlot .db file')
+      fileInput('infile', multiple=F, label=NULL)
     })
   }
 )

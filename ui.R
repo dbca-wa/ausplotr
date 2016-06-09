@@ -6,7 +6,6 @@ shinyUI(
   navbarPage(
     "AusPlot data explorer",
     id="nav",
-
     tabPanel("Map",
              div(class="outer",
                  tags$head(includeCSS("style.css")),
@@ -14,16 +13,17 @@ shinyUI(
                  absolutePanel(
                    id = "controls", class = "panel panel-default",
                    fixed = TRUE, draggable = TRUE,
-                   top = 80, left = "auto", right = 20, bottom = "auto",
+                   top = 120, left = "auto", right = 20, bottom = "auto",
                    width = 280, height = "auto",
 
                    h3("Upload .db"),
                    uiOutput("upload"),
-                   uiOutput("download")
+                   uiOutput("siteSelector"),
+                   uiOutput("download"),
+                   uiOutput("siteSummary")
                  ) # absolutePanel
              ) # div.outer
     ), # tabPanel Map
-
     tabPanel("Site Profiles", DT::dataTableOutput("table_sp")),
     tabPanel("Transect Profiles", DT::dataTableOutput("table_tp")),
     tabPanel("Species Records", DT::dataTableOutput("table_sr")),

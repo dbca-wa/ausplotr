@@ -102,6 +102,7 @@ get_data <- function(f){
       group_by(plotName, transectId, fieldName) %>%
       tally(sort=T) %>%
       spread(fieldName, n) %>%
+      select(-plotName) %>%
       left_join(tx, by="transectId")
 
     # site profile = species records counts by site
@@ -123,15 +124,28 @@ get_data <- function(f){
     data
 }
 
+#' Filter a dataframe d returning rows where column col matches value val
+filterDf <- function(d, val){
+  filtered <- d[which(d$plotName %in% val),]
+}
+
+#' Filter a list of dataframes ld to one plotName pn
+get_filtered_data <- function(ld, pn="All"){
+  if (pn=="All") return(ld)
+  filtered <- lapply(ld, filterDf, pn)
+  filtered
+}
+
 #' Prepare a DT datatable with sensible defaults
-make_dt <- function(x, filter="top", pageLength=50){
+make_dt <- function(x, filter="top", pageLength=10){
   out <- DT::renderDataTable(
-    DT::datatable(x,
-                  filter=filter,
-                  options=list(pageLength = pageLength,
-                               autoWidth = TRUE,
-                               columnDefs = list(list(width='500px',
-                                                      targets=c("plotComment")))
-    )))
+    DT::datatable(
+      x,
+      filter=filter,
+      options=list(
+        pageLength = pageLength,
+        autoWidth = TRUE,
+        columnDefs = list(list(width='500px', targets=c("plotComment")))
+      )))
   out
 }
