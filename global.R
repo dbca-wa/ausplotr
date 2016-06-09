@@ -102,7 +102,8 @@ get_data <- function(f){
       group_by(plotName, transectId, fieldName) %>%
       tally(sort=T) %>%
       spread(fieldName, n) %>%
-      select(-plotName) %>%
+      ungroup() %>%
+      select(-starts_with("plotName")) %>%
       left_join(tx, by="transectId")
 
     # site profile = species records counts by site
@@ -110,6 +111,7 @@ get_data <- function(f){
       group_by(plotName, fieldName) %>%
       tally(sort=T) %>%
       spread(fieldName, n) %>%
+      ungroup() %>%
       left_join(pl_simple, by="plotName")
 
 
