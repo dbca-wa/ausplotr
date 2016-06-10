@@ -1,6 +1,6 @@
 source("global.R")
-library(DT)
 library(shiny)
+library(DT)
 library(leaflet)
 library(vegan)
 
@@ -116,14 +116,15 @@ shinyServer(
     # Download panel ----------------------------------------------------------#
     output$download <- renderUI({
       if (is.null(data())) return(NULL)
+      cl = "btn-xs btn-info"
       wellPanel(
         h3("Download CSV"),
-        downloadButton('download_sp', 'Site Profiles'),
-        downloadButton('download_tp', 'Transect Profiles'),
-        downloadButton('download_sr', 'Species Records'),
-        downloadButton('download_bw', 'Basal Wedge'),
-        downloadButton('download_vv', 'Vouchered Vegetation'),
-        downloadButton('download_tx', 'Transects and Sites')
+        downloadButton('download_sp', 'Site Profiles', class=cl),
+        downloadButton('download_tp', 'Transect Profiles', class=cl),
+        downloadButton('download_sr', 'Species Records', class=cl),
+        downloadButton('download_bw', 'Basal Wedge', class=cl),
+        downloadButton('download_vv', 'Vouchered Vegetation', class=cl),
+        downloadButton('download_tx', 'Transects and Sites', class=cl)
       )
     })
 
@@ -132,18 +133,33 @@ shinyServer(
     })
 
     output$tx_pca <- renderPlot({
+      if (is.null(data())) return(NULL)
       d <- filteredData()
-      if (is.null(d)) return(NULL)
-      d$transect_profiles[is.na(d$transect_profiles)] <- 0
-      pca <- d$transect_profiles %>%
+      Y <- d$transect_profiles %>%
         dplyr::select(-starts_with("transect"),
                       -starts_with("plot"),
-                      -completionDateTime, -lat, -lon) %>%
-        vegan::decostand("hellinger", na.rm=T) %>%
-        rda()
-      plot(pca, type = "t",
-           main="PCA of transect profiles",
-           sub=paste("Selected sites:", input$sitepicker))
+                      -completionDateTime, -lat, -lon)
+
+      Y[is.na(Y)] <- 0
+
+      plt <- vegan::decostand(Y, "hellinger", na.rm=T) %>%
+        rda() %>%
+        plot(type = "t",
+             main="PCA of Hellinger-tf Tx profiles",
+             sub=paste("Selected sites:", input$sitepicker))
+      # insert test whether plot is ok
+      plt
+    })
+
+    output$plot <- renderUI({
+      if (is.null(data())) return(NULL)
+      absolutePanel(
+        id = "controls", class = "panel panel-default",
+        fixed = TRUE, draggable = TRUE,
+        top = "auto", left = 20, right = "auto", bottom = 20,
+        width = "350", height = "auto",
+        plotOutput("tx_pca")
+      ) # absolutePanel
     })
 
   }

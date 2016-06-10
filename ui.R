@@ -16,13 +16,13 @@ shinyUI(
                    top = 120, left = "auto", right = 20, bottom = "auto",
                    width = 280, height = "auto",
 
-                   h3("Upload .db"),
+                   h3("Upload Ausplot .db"),
                    uiOutput("upload"),
                    uiOutput("siteSelector"),
                    uiOutput("download"),
-                   uiOutput("siteSummary"),
-                   plotOutput("tx_pca")
-                 ) # absolutePanel
+                   uiOutput("siteSummary")
+                 ), # absolutePanel
+                 uiOutput("plot")
              ) # div.outer
     ), # tabPanel Map
     tabPanel("Site Profiles", DT::dataTableOutput("table_sp")),
