@@ -105,6 +105,7 @@ get_data <- function(f){
       ungroup() %>%
       select(-starts_with("plotName")) %>%
       left_join(tx, by="transectId")
+    row.names(tp) <- paste(tp$plotId, "-", tp$transectId)
 
     # site profile = species records counts by site
     sp <- tbl_df(sr) %>%
@@ -113,7 +114,6 @@ get_data <- function(f){
       spread(fieldName, n) %>%
       ungroup() %>%
       left_join(pl_simple, by="plotName")
-
 
     data <- list(species_records=sr,
                  basal_wedge=bw,

@@ -20,7 +20,8 @@ shinyUI(
                    uiOutput("upload"),
                    uiOutput("siteSelector"),
                    uiOutput("download"),
-                   uiOutput("siteSummary")
+                   uiOutput("siteSummary"),
+                   plotOutput("tx_pca")
                  ) # absolutePanel
              ) # div.outer
     ), # tabPanel Map

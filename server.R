@@ -2,6 +2,7 @@ source("global.R")
 library(DT)
 library(shiny)
 library(leaflet)
+library(vegan)
 
 shinyServer(
   function(input, output){
@@ -19,8 +20,7 @@ shinyServer(
 
     filteredData <- reactive({
       if (is.null(data())) return(NULL)
-      d <- get_filtered_data(data(), pn=input$sitepicker)
-      d
+      get_filtered_data(data(), pn=input$sitepicker)
     })
 
     output$table_sp <- make_dt(data()$site_profiles)
@@ -33,7 +33,8 @@ shinyServer(
 
     # Map object --------------------------------------------------------------#
     output$map <- renderLeaflet({
-      leaflet(data()$transects_sites) %>%
+      d <- data()
+      leaflet() %>%
         # Provider tiles: pick any from
         # http://leaflet-extras.github.io/leaflet-providers/preview/index.html
         addProviderTiles("OpenStreetMap.Mapnik") %>%
@@ -41,12 +42,19 @@ shinyServer(
                          options=providerTileOptions(opacity=0.8)) %>%
         setView(lng = 120, lat = -25, zoom = 5) %>%
         addMiniMap(toggleDisplay=T) %>%
+        clearShapes()
+    })
+
+    observe({
+      d <- data()
+      if (is.null(d)) return(NULL)
+      leafletProxy("map", data=data()) %>%
         clearShapes() %>%
-        addMarkers(d$transects_sites$lon,
-                   d$transects_sites$lat,
-                   label=d$transects_sites$name,
-                   popup=d$transects_sites$popup,
-                   clusterOptions=T)
+        addAwesomeMarkers(d$transects_sites$lon,
+                          d$transects_sites$lat,
+                          label=d$transects_sites$name,
+                          popup=d$transects_sites$popup,
+                          clusterOptions=T)
     })
 
     # react to "Show Site"
@@ -122,5 +130,21 @@ shinyServer(
     output$upload <- renderUI({
       fileInput('infile', multiple=F, label=NULL)
     })
+
+    output$tx_pca <- renderPlot({
+      d <- filteredData()
+      if (is.null(d)) return(NULL)
+      d$transect_profiles[is.na(d$transect_profiles)] <- 0
+      pca <- d$transect_profiles %>%
+        dplyr::select(-starts_with("transect"),
+                      -starts_with("plot"),
+                      -completionDateTime, -lat, -lon) %>%
+        vegan::decostand("hellinger", na.rm=T) %>%
+        rda()
+      plot(pca, type = "t",
+           main="PCA of transect profiles",
+           sub=paste("Selected sites:", input$sitepicker))
+    })
+
   }
 )
