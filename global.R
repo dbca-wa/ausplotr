@@ -20,14 +20,16 @@ library(DT)
 #' Returns a list of data frames:
 #'
 #' species_records: Observations and measurements of individuals within a
-#'  transect, plus date, location, tx point details, tx and site names.
+#'  transect, plus date, location, tx point details, tx and site names, and
+#'  voucher barcodes
+#' basal_wedge: basal wedge records with voucher barcodes
 #' transects: all Transect details plus selected plot details
 #' sites: all Plot details
 #' transects_sites: all tx and site details plus HTML for map popup
 #' transect_profiles: transect by species pivot table
 #' site_profiles: site by species pivot table
-#' vouchered_vegetation: vv per site
-#'
+#' vouchered_vegetation: barcodes for specimen vouchers, linking field names to
+#'  properly identified species names later
 #'
 #' @param f A file path, such as RShiny's input$infile$datapath
 get_one_data <- function(filename, datapath){
@@ -73,12 +75,10 @@ get_one_data <- function(filename, datapath){
       transectCompletionDateTime, plotId)
 
     # vouchered vegetation with basic site details
-    vv_simple <- dbGetQuery(con, paste0(
-      'SELECT *, "', filename,
+    vv_simple <- dbGetQuery(con, paste0('SELECT *, "', filename,
       '-vv-"||vv.id as vvUid FROM voucheredVeg as vv')) %>% tbl_df()
     rownames(vv_simple) <- vv_simple$vvUid
-    vv <- vv_simple %>%
-      left_join(pl_simple, by="plotId") %>% tbl_df()
+    vv <- left_join(vv_simple, pl_simple, by="plotId") %>% tbl_df()
 
     sr <- dbGetQuery(con, paste0(
       'SELECT sr.id, "', filename, '-sr-"||sr.id as srUid,
@@ -90,9 +90,7 @@ get_one_data <- function(filename, datapath){
       left_join(tx_simple, by="transectId") %>%
       left_join(pl_simple, by="plotId") %>%
       left_join(vv_simple, by=c("fieldName", "plotId")) %>% tbl_df()
-#     sr$id <- paste0(filename, "-site-", pl$plotId)
     rownames(sr) <- sr$srUid
-
 
     # basal wedge with basic site details
     bw = dbGetQuery(con, paste0('SELECT *, "', filename,
@@ -176,9 +174,10 @@ get_data <- function(fup){
 #' Filter a dataframe `d` returning rows where column matches value `val`
 filterDf <- function(d, val){filtered <- d[which(d$plotName %in% val),]}
 
+
 #' Filter a list of dataframes ld to one plotName pn
 get_filtered_data <- function(ld, pn="All"){
-  if (pn=="All") return(ld) else  lapply(ld, filterDf, pn)
+  if (pn=="All") return(ld) else lapply(ld, filterDf, pn)
 }
 
 
