@@ -164,10 +164,15 @@ combine_df <- function(ln, lol) {bind_rows(lapply(lol, "[[", ln))}
 #' * combine dataframes of each name (all species_records, etc.)
 #' * restore the names and return the list of merged dataframes
 get_data <- function(fup){
+  message("Loading selected files...")
   lol <- mapply(get_one_data, fup$name, fup$datapath, SIMPLIFY=F)
+  message("done. Extracting dataframe names...")
   ln <- names(m[[1]])
+  message("done. Merging data...")
   z <- lapply(ln, combine_df, m)
+  message("done. Setting names...")
   names(z) <- ln
+  message("done. Returning data to application.")
   z
 }
 
