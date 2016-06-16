@@ -144,27 +144,37 @@ get_one_data <- function(filename, datapath){
     data
 }
 
+
+#' Row-bind dataframes with a shared list name `ln` across a list of lists `lol`
+#'
+#' Arguments:
+#' lol  A list of lists of dataframes, e.g. a list of `get_one_data` outputs
+#' ln   A name of a dataframe in the named list, e.g. `species_records`
+#'
+#' Returns:
+#'      The sum of all dataframes row-bound as one dataframe, e.g. all
+#'      `species_records` in one dataframe
+combine_df <- function(ln, lol) {bind_rows(lapply(lol, "[[", ln))}
+
+
 #' Combine data read from multiple .db files into one list of dataframes
 #'
-#' Step 1: read each input file (.db) into a list of dataframes
-#' Step 2: combine the list of lists of dataframes by dataframes
+#' Steps:
+#'
+#' * read each input file (.db) as list of dataframes into a list of lists
+#' * get the names of dataframes
+#' * combine dataframes of each name (all species_records, etc.)
+#' * restore the names and return the list of merged dataframes
 get_data <- function(fup){
   lol <- mapply(get_one_data, fup$name, fup$datapath, SIMPLIFY=F)
-  z <-list(
-    species_records=bind_rows(lapply(lol, "[[", "species_records")),
-    basal_wedge=bind_rows(lapply(lol, "[[", "basal_wedge")),
-    vouchered_vegetation=bind_rows(lapply(lol, "[[", "vouchered_vegetation")),
-    transects=bind_rows(lapply(lol, "[[", "transects")),
-    transect_profiles=bind_rows(lapply(lol, "[[", "transect_profiles")),
-    transects_sites=bind_rows(lapply(lol, "[[", "transects_sites")),
-    sites=bind_rows(lapply(lol, "[[", "sites")),
-    site_profiles=bind_rows(lapply(lol, "[[", "site_profiles")))
+  ln <- names(m[[1]])
+  z <- lapply(ln, combine_df, m)
+  names(z) <- ln
   z
 }
 
 
-
-#' Filter a dataframe d returning rows where column col matches value val
+#' Filter a dataframe `d` returning rows where column matches value `val`
 filterDf <- function(d, val){filtered <- d[which(d$plotName %in% val),]}
 
 #' Filter a list of dataframes ld to one plotName pn
@@ -173,6 +183,7 @@ get_filtered_data <- function(ld, pn="All"){
   filtered <- lapply(ld, filterDf, pn)
   filtered
 }
+
 
 #' Prepare a DT datatable with sensible defaults
 make_dt <- function(x, filter="top", pageLength=10){

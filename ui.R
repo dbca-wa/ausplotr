@@ -19,8 +19,7 @@ shinyUI(
                    h3("Upload Ausplot .db"),
                    uiOutput("upload"),
                    uiOutput("siteSelector"),
-                   uiOutput("download"),
-                   uiOutput("siteSummary")
+                   uiOutput("download")
                  ), # absolutePanel
                  uiOutput("plot")
              ) # div.outer
