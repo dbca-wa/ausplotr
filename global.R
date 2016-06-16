@@ -31,7 +31,7 @@ library(DT)
 #'
 #' @param f A file path, such as RShiny's input$infile$datapath
 get_one_data <- function(filename, datapath){
-    print(paste("get_one_data reads ", filename, "from", datapath))
+    message(paste("Loading" , filename, "from", datapath))
 
     require(RSQLite)
     con <- dbConnect(RSQLite::SQLite(), dbname=datapath)
@@ -133,15 +133,14 @@ get_one_data <- function(filename, datapath){
       left_join(pl_simple, by="plotName")
     # sp[is.na(sp)] <- 0
 
-    data <- list(species_records=sr,
-                 basal_wedge=bw,
-                 vouchered_vegetation=vv,
-                 transects=tx,
-                 transects_sites=ts,
-                 transect_profiles=tp,
-                 sites=pl,
-                 site_profiles=sp)
-    data
+    list(species_records=sr,
+         basal_wedge=bw,
+         vouchered_vegetation=vv,
+         transects=tx,
+         transects_sites=ts,
+         transect_profiles=tp,
+         sites=pl,
+         site_profiles=sp)
 }
 
 
@@ -179,15 +178,13 @@ filterDf <- function(d, val){filtered <- d[which(d$plotName %in% val),]}
 
 #' Filter a list of dataframes ld to one plotName pn
 get_filtered_data <- function(ld, pn="All"){
-  if (pn=="All") return(ld)
-  filtered <- lapply(ld, filterDf, pn)
-  filtered
+  if (pn=="All") return(ld) else  lapply(ld, filterDf, pn)
 }
 
 
 #' Prepare a DT datatable with sensible defaults
 make_dt <- function(x, filter="top", pageLength=10){
-  out <- DT::renderDataTable(
+  DT::renderDataTable(
     DT::datatable(
       x,
       filter=filter,
@@ -196,5 +193,4 @@ make_dt <- function(x, filter="top", pageLength=10){
         autoWidth = TRUE,
         columnDefs = list(list(width='500px', targets=c("plotComment")))
       )))
-  out
 }

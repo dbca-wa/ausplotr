@@ -9,8 +9,7 @@ shinyServer(
 
     # Data --------------------------------------------------------------------#
     data <- reactive({
-      if (is.null(input$infile)) return(NULL)
-      get_data(input$infile)
+      if (is.null(input$infile)) return(NULL) else get_data(input$infile)
     })
 
     output$siteSelector <- renderUI({
@@ -60,8 +59,8 @@ shinyServer(
     # react to "Show Site"
     observeEvent(input$sitepicker, {
       if (is.null(filteredData())) return(NULL)
-      print(input$sitepicker)
-      print(min(filteredData()$sites$lon))
+      message(paste("Selecting site", input$sitepicker, "at",
+        min(filteredData()$sites$lat), "/", min(filteredData()$sites$lon)))
       leafletProxy("map") %>%
         fitBounds(min(filteredData()$sites$lon),
                   min(filteredData()$sites$lat),
@@ -142,13 +141,15 @@ shinyServer(
 
       Y[is.na(Y)] <- 0
 
-      plt <- vegan::decostand(Y, "hellinger", na.rm=T) %>%
-        rda() %>%
-        plot(type = "t",
-             main="PCA of Hellinger-tf Tx profiles",
-             sub=paste("Selected sites:", input$sitepicker))
-      # insert test whether plot is ok
-      plt
+      tryCatch(
+        # this could get messy with dirty data
+        plt <- vegan::decostand(Y, "hellinger", na.rm=T) %>%
+          rda() %>%
+          plot(type = "t",
+               main="PCA of Hellinger-tf Tx profiles",
+               sub=paste("Selected sites:", input$sitepicker)),
+        finally = return(NULL)
+      )
     })
 
     output$plot <- renderUI({
