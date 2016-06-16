@@ -131,7 +131,7 @@ get_one_data <- function(filename, datapath){
       left_join(pl_simple, by="plotName")
     # sp[is.na(sp)] <- 0
 
-    list(species_records=sr,
+    d <- list(species_records=sr,
          basal_wedge=bw,
          vouchered_vegetation=vv,
          transects=tx,
@@ -139,6 +139,7 @@ get_one_data <- function(filename, datapath){
          transect_profiles=tp,
          sites=pl,
          site_profiles=sp)
+    d
 }
 
 
