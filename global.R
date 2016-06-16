@@ -30,12 +30,15 @@ library(DT)
 #'
 #'
 #' @param f A file path, such as RShiny's input$infile$datapath
-get_data <- function(f){
-    require(RSQLite)
-    con <- dbConnect(RSQLite::SQLite(), dbname=f)
+get_one_data <- function(filename, datapath){
+    print(paste("get_one_data reads ", filename, "from", datapath))
 
-    pl <- dbGetQuery(con, 'SELECT pl.id as plotId, pl.name as plotName,
-      pl.lat as lat, pl.lon as lon,
+    require(RSQLite)
+    con <- dbConnect(RSQLite::SQLite(), dbname=datapath)
+
+    pl <- dbGetQuery(con, paste0(
+      'SELECT pl.id as plotId, "', filename, '-site-"||pl.id as plotUid,
+      pl.name as plotName, pl.lat as lat, pl.lon as lon,
       pl.current, pl.finished, pl.completionDate,
       pl.completionTime, pl.uploaded, pl.vegObserver,
       pl.vegAffiliation, pl.plotComment, pl.permanent, pl.aligned,
@@ -46,44 +49,57 @@ get_data <- function(f){
       pl.physicalStatusComments,
       ss.upper1, ss.upper2, ss.upper3, ss.middle1, ss.middle2, ss.middle3,
       ss.lower1, ss.lower2, ss.lower3, ss.massFloweringEventEvidence
-      FROM plots AS pl
-      LEFT JOIN sitesummary AS ss ON pl.id = ss.plotId') %>%
+      FROM plots AS pl LEFT JOIN sitesummary AS ss ON pl.id = ss.plotId')) %>%
       mutate(plotCompletionDateTime=paste(completionDate, completionTime)) %>%
       mutate(plotCompletionDateTime=parse_date_time(
         plotCompletionDateTime, orders=c("YmdHMS"), tz="Australia/Perth")) %>%
       tbl_df()
+    rownames(pl) <- pl$plotUid
 
-    pl_simple <- pl %>%
-      select(plotId, plotName, lat, lon, plotCompletionDateTime)
+    pl_simple <- select(pl, plotId, plotName, lat, lon, plotCompletionDateTime)
 
-    tx <- dbGetQuery(con, 'SELECT tx.id as transectId,
+    tx <- dbGetQuery(con, paste0(
+      'SELECT tx.id as transectId, "', filename, '-tx-"||tx.id as txUid,
       tx.startPoint as transectStartPoint, tx.endPoint as transectEndPoint,
       tx.completionDateTime,
       pl.id as plotId, pl.name as plotName, pl.lat as lat, pl.lon as lon
-      FROM transects AS tx LEFT JOIN plots AS pl ON tx.plotId = pl.id') %>%
+      FROM transects AS tx LEFT JOIN plots AS pl ON tx.plotId = pl.id')) %>%
       mutate(transectCompletionDateTime=parse_date_time(
         completionDateTime, orders="mdYHMS", tz="Australia/Perth")) %>%
       tbl_df()
+    rownames(tx) <- tx$txUid
 
-    tx_simple <- tx %>%
-      select(transectId, transectStartPoint, transectEndPoint,
-             transectCompletionDateTime, plotId)
+    tx_simple <- select(tx, transectId, transectStartPoint, transectEndPoint,
+      transectCompletionDateTime, plotId)
 
-    sr <- dbGetQuery(con, 'SELECT sr.id, sr.fieldName, sr.inCanopySky,
+    # vouchered vegetation with basic site details
+    vv_simple <- dbGetQuery(con, paste0(
+      'SELECT *, "', filename,
+      '-vv-"||vv.id as vvUid FROM voucheredVeg as vv')) %>% tbl_df()
+    rownames(vv_simple) <- vv_simple$vvUid
+    vv <- vv_simple %>%
+      left_join(pl_simple, by="plotId") %>% tbl_df()
+
+    sr <- dbGetQuery(con, paste0(
+      'SELECT sr.id, "', filename, '-sr-"||sr.id as srUid,
+      sr.fieldName, sr.inCanopySky,
       sr.senescent, sr.growthForm, sr.height, sr.transectPointId,
       tp.number as transectPointNumber, tp.substrateType, tp.transectId
       FROM speciesRecord AS sr
-      LEFT JOIN transectPoints AS tp ON sr.transectPointId = tp.id') %>%
+      LEFT JOIN transectPoints AS tp ON sr.transectPointId = tp.id')) %>%
       left_join(tx_simple, by="transectId") %>%
-      left_join(pl_simple, by="plotId") %>% tbl_df()
+      left_join(pl_simple, by="plotId") %>%
+      left_join(vv_simple, by=c("fieldName", "plotId")) %>% tbl_df()
+#     sr$id <- paste0(filename, "-site-", pl$plotId)
+    rownames(sr) <- sr$srUid
 
-    # vouchered vegetation with basic site details
-    vv <- dbGetQuery(con, 'SELECT * FROM voucheredVeg') %>%
-      left_join(pl_simple, by="plotId") %>% tbl_df()
 
     # basal wedge with basic site details
-    bw = dbGetQuery(con, 'SELECT * FROM bwRecords') %>%
-      left_join(pl_simple, by="plotId") %>% tbl_df()
+    bw = dbGetQuery(con, paste0('SELECT *, "', filename,
+                    '-bw-"||bw.id as bwUid FROM bwRecords as bw')) %>%
+      left_join(pl_simple, by="plotId") %>%
+      left_join(vv_simple, by=c("fieldName", "plotId")) %>% tbl_df()
+    rownames(bw) <- bw$bwUid
 
     # transects with full site details
     ts <- tx_simple %>% left_join(pl, by="plotId") %>% tbl_df()
@@ -121,17 +137,35 @@ get_data <- function(f){
                  basal_wedge=bw,
                  vouchered_vegetation=vv,
                  transects=tx,
-                 transect_profiles=tp,
                  transects_sites=ts,
+                 transect_profiles=tp,
                  sites=pl,
                  site_profiles=sp)
     data
 }
 
-#' Filter a dataframe d returning rows where column col matches value val
-filterDf <- function(d, val){
-  filtered <- d[which(d$plotName %in% val),]
+#' Combine data read from multiple .db files into one list of dataframes
+#'
+#' Step 1: read each input file (.db) into a list of dataframes
+#' Step 2: combine the list of lists of dataframes by dataframes
+get_data <- function(fup){
+  lol <- mapply(get_one_data, fup$name, fup$datapath, SIMPLIFY=F)
+  z <-list(
+    species_records=bind_rows(lapply(lol, "[[", "species_records")),
+    basal_wedge=bind_rows(lapply(lol, "[[", "basal_wedge")),
+    vouchered_vegetation=bind_rows(lapply(lol, "[[", "vouchered_vegetation")),
+    transects=bind_rows(lapply(lol, "[[", "transects")),
+    transect_profiles=bind_rows(lapply(lol, "[[", "transect_profiles")),
+    transects_sites=bind_rows(lapply(lol, "[[", "transects_sites")),
+    sites=bind_rows(lapply(lol, "[[", "sites")),
+    site_profiles=bind_rows(lapply(lol, "[[", "site_profiles")))
+  z
 }
+
+
+
+#' Filter a dataframe d returning rows where column col matches value val
+filterDf <- function(d, val){filtered <- d[which(d$plotName %in% val),]}
 
 #' Filter a list of dataframes ld to one plotName pn
 get_filtered_data <- function(ld, pn="All"){

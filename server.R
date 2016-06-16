@@ -10,7 +10,7 @@ shinyServer(
     # Data --------------------------------------------------------------------#
     data <- reactive({
       if (is.null(input$infile)) return(NULL)
-      get_data(input$infile$datapath)
+      get_data(input$infile)
     })
 
     output$siteSelector <- renderUI({
@@ -129,7 +129,7 @@ shinyServer(
     })
 
     output$upload <- renderUI({
-      fileInput('infile', multiple=F, label=NULL)
+      fileInput('infile', multiple=T, label=NULL)
     })
 
     output$tx_pca <- renderPlot({
@@ -138,7 +138,7 @@ shinyServer(
       Y <- d$transect_profiles %>%
         dplyr::select(-starts_with("transect"),
                       -starts_with("plot"),
-                      -completionDateTime, -lat, -lon)
+                      -completionDateTime, -lat, -lon, -txUid)
 
       Y[is.na(Y)] <- 0
 

@@ -1,7 +1,7 @@
 require(RSQLite)
 require(tidyr)
 require(dplyr)
-require(lubridate)
+# require(lubridate)
 require(markdown)
 require(shiny)
 require(DT)
