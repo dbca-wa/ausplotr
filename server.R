@@ -151,6 +151,7 @@ shinyServer(
                sub=paste("Selected sites:", input$sitepicker)),
         finally = return(NULL)
       )
+      plt
     })
 
     output$plot <- renderUI({
