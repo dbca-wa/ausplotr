@@ -9,8 +9,7 @@ shinyServer(
 
     # Data --------------------------------------------------------------------#
     data <- reactive({
-      if (is.null(input$infile)) return(NULL)
-      get_data(input$infile)
+      if (is.null(input$infile)) return(NULL) else get_data(input$infile)
     })
 
     output$siteSelector <- renderUI({

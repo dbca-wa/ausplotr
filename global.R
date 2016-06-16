@@ -176,7 +176,7 @@ get_data <- function(fup){
 filterDf <- function(d, val){filtered <- d[which(d$plotName %in% val),]}
 
 
-#' Filter a list of dataframes ld to one plotName pn
+#' Filter a list of dataframes `ld` to one plotName `pn`
 get_filtered_data <- function(ld, pn="All"){
   if (pn=="All") return(ld) else lapply(ld, filterDf, pn)
 }
