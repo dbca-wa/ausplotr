@@ -1,17 +1,20 @@
 # AusplotR
 
-AusplotR aims to give an early preview of data that was collected using the
-official [AusPlot](http://www.ausplots.org/) data collection software before 
-submitting the data to TERN / Aekos.
+AusplotR aims to give researchers an early preview of data that was collected using the
+official [AusPlot](http://www.ausplots.org/) field survey app before 
+submitting the data to [Aekos](http://www.aekos.org.au/).
 
-AusplotR lets the user upload one or multiple SQLite .db files,
-merges the data into several tables (resolving lookups and parent-child table relationships),
-maps the data (allowing to zoom in on one or all sites), and finally lets the
-user download the data in CSV format for subsequent inspection.
+AusplotR 
+
+* lets the user upload one or multiple SQLite .db files,
+* merges the data from all .db files, produces human-readable views of the data 
+  resolving lookups and parent-child table relationships,
+* maps the data (allowing to zoom in on one or all sites), and finally 
+* lets the user download the data in CSV format for subsequent inspection.
 
 ### Workflow
 
-* Load application: shows empty map
+* Load application: load map
 * Upload one or several files: loads each file, merges data, displays transects,
   displays data tables, displays an example ordination, prepares merged data for download
 * Select one or "all" sites from site picker: filters data on map, in tables,
@@ -19,7 +22,7 @@ user download the data in CSV format for subsequent inspection.
 
 Note: the download always includes all data, independent of selection.
 
-# For developers
+# Technical notes
 AusplotR was inspired by the 
 [RShiny Gallery SuperZIP example](http://shiny.rstudio.com/gallery/superzip-example.html), 
 but also hopes to serve as working example for some tricky issues.
@@ -83,4 +86,5 @@ multiple files was implemented in `global.R`:
 [![license](https://i.creativecommons.org/l/by-sa/4.0/88x31.png)](http://creativecommons.org/licenses/by-sa/4.0/)
 AusplotR is not affiliated with [AusPlot](http://www.ausplots.org/).
 
-AusplotR hopes to be useful, without any guarantee or liability for any damage arising from its use.
+AusplotR hopes to be useful, without any guarantee or liability for any damage 
+arising from its use.

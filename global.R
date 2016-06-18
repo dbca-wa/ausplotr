@@ -1,14 +1,20 @@
 ## Libraries
 # if (!require("pacman")) install.packages("pacman")
 # pacman::p_load("shiny", "readr", "dplyr", "tidyr", "stringr", "lubridate",
-               # "RSQLite", "DT", "markdown", update=T)
+               # "RSQLite", "DT", "markdown", update=F)
 # devtools::install_github('rstudio/leaflet')
 library(RSQLite)
 library(tidyr)
 library(dplyr)
+library(readr)
 library(lubridate)
 library(shiny)
 library(DT)
+library(sp)
+library(rgeos)
+
+#------------------------------------------------------------------------------#
+# Read observations from Ausplot field data app
 
 #' Extract data from a raw Ausplot SQLite .db file
 #'
@@ -171,6 +177,8 @@ get_data <- function(fup){
   z
 }
 
+#------------------------------------------------------------------------------#
+# Filter observations
 
 #' Filter a dataframe `d` returning rows where column matches value `val`
 filterDf <- function(d, val){filtered <- d[which(d$plotName %in% val),]}
@@ -194,3 +202,80 @@ make_dt <- function(x, filter="top", pageLength=10){
         columnDefs = list(list(width='500px', targets=c("plotComment")))
       )))
 }
+
+
+#------------------------------------------------------------------------------#
+# Sites from dGPS
+
+#' Convert strings like `119.31'8.14"` to `119°31'8.14"`
+repair_dms <- function(dms_string){sub("[.]", "°", dms_string)}
+
+#' Read one dGPS file into a SpatialPointsDataFrame of plotName and centroid
+#'
+#' The site name must the in line 3 as 4th token
+#' The points must begin in line 9
+#' The points column names must be:
+#' "point","easting","northing","rl", "lat","lon","code","att1","3DCQ"
+#' The coordinates are assumed to be of format `119.31'8.14"`
+read_one_site <- function(filename, datapath){
+  pn <- stringr::str_replace_all(
+    names(read_delim(datapath, skip=2, n_max = 1, delim=" "))[4], "-"," ")
+  cols <- c("point","easting","northing","rl", "lat","lon","code","att1","3DCQ")
+  gpspoints <- read_csv(datapath, skip=8, col_names=cols) %>%
+    mutate(plotName=pn,
+           lon_dd = as.numeric(char2dms(repair_dms(lon), chd="°")),
+           lat_dd = as.numeric(char2dms(repair_dms(lat), chd="°")),
+           lon_dms = as.character(char2dms(repair_dms(lon), chd="°")),
+           lat_dms = as.character(char2dms(repair_dms(lat), chd="°"))) %>%
+    tbl_df()
+  gpspoints
+}
+
+#' Return plotName and centroid lon/lat as tbl_df from a read_one_site tbl_df
+site_centroid <- function(sitedf){
+  wgs84 <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84")
+  gps.dd.df <- as.data.frame(select(sitedf, lat_dd, lon_dd))
+  sitecen <- gCentroid(SpatialPoints(gps.dd.df, proj4string=wgs84))
+  # site <- SpatialPointsDataFrame(sitecen, as.data.frame(list(plotName=pn)))
+  site <- tbl_df(
+    as.data.frame(
+      list(plotName=sitedf[1,]$plotName,
+           longitude=sitecen$x,
+           latitude=sitecen$y)))
+  site
+}
+
+get_one_site_centroid <- function(filename, datapath){
+  site_centroid(read_one_site(filename, datapath))
+}
+
+#' Read all dGPS text files into one tbl_df
+get_sites <- function(fup){
+  bind_rows(
+    as.list(
+      mapply(read_one_site, fup$name, fup$datapath, SIMPLIFY=F)))
+}
+
+#' Read all dGPS text files into one tbl_df of centroids
+get_site_centroids <- function(fup){
+  bind_rows(
+    as.list(
+      mapply(get_one_site_centroid, fup$name, fup$datapath, SIMPLIFY=F)))
+}
+
+## Create convex hull from points
+# wgs84 <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84")
+# gps.dd.df <- as.data.frame(select(gpspoints, lat_dd, lon_dd))
+# gps.dms.df <- as.data.frame(select(gpspoints, lat_dms, lon_dms))
+# gps.df <- as.data.frame(select(gpspoints, plotName, point, lon_dd, lat_dd,
+#                                lon_dms, lat_dms, easting, northing))
+# sitepol <- gConvexHull(SpatialPoints(gps.dd.df, proj4string=wgs84))
+# sitecen <- gCentroid(SpatialPoints(gps.dd.df, proj4string=wgs84))
+
+# sitesdf <- SpatialPointsDataFrame(SpatialPoints(gps.dd.df, proj4string=wgs84), gps.df)
+# site <- SpatialPointsDataFrame(sitecen, as.data.frame(sitename))
+## Write to GeoJSON
+# writeOGR(site, paste0(n, '.geojson'), 'sites', driver='GeoJSON')
+# writeOGR(sitesdf, paste0(n, '-txpoints.geojson'), 'transectpoints', driver='GeoJSON')
+
+
