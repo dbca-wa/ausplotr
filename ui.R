@@ -17,7 +17,8 @@ shinyUI(
                    width = 280, height = "auto",
 
                    h3("Upload Ausplot .db"),
-                   uiOutput("upload"),
+                   uiOutput("upload_ausplot"),
+                   uiOutput("upload_dgps"),
                    uiOutput("siteSelector"),
                    uiOutput("download")
                  ), # absolutePanel
@@ -25,13 +26,13 @@ shinyUI(
              ) # div.outer
     ), # tabPanel Map
     tabPanel("Site Profiles", DT::dataTableOutput("table_sp")),
-    tabPanel("Transect Profiles", DT::dataTableOutput("table_tp")),
+    # tabPanel("Transect Profiles", DT::dataTableOutput("table_tp")),
     tabPanel("Species Records", DT::dataTableOutput("table_sr")),
     tabPanel("Basal Wedge", DT::dataTableOutput("table_bw")),
     tabPanel("Vouchered Vegetation", DT::dataTableOutput("table_vv")),
     tabPanel("Transects", DT::dataTableOutput("table_tx")),
     tabPanel("Sites", DT::dataTableOutput("table_si")),
+    tabPanel("dGPS", DT::dataTableOutput("table_sg")),
     tabPanel("Help", includeMarkdown("README.md"))
   )
 )
-

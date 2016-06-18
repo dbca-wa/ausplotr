@@ -208,7 +208,9 @@ make_dt <- function(x, filter="top", pageLength=10){
 # Sites from dGPS
 
 #' Convert strings like `119.31'8.14"` to `119°31'8.14"`
-repair_dms <- function(dms_string){sub("[.]", "°", dms_string)}
+repair_dms <- function(dms_string, NSWE="S"){
+  paste0(sub("[.]", "°", dms_string), NSWE)
+}
 
 #' Read one dGPS file into a SpatialPointsDataFrame of plotName and centroid
 #'
@@ -223,10 +225,10 @@ read_one_site <- function(filename, datapath){
   cols <- c("point","easting","northing","rl", "lat","lon","code","att1","3DCQ")
   gpspoints <- read_csv(datapath, skip=8, col_names=cols) %>%
     mutate(plotName=pn,
-           lon_dd = as.numeric(char2dms(repair_dms(lon), chd="°")),
-           lat_dd = as.numeric(char2dms(repair_dms(lat), chd="°")),
-           lon_dms = as.character(char2dms(repair_dms(lon), chd="°")),
-           lat_dms = as.character(char2dms(repair_dms(lat), chd="°"))) %>%
+           lon_dd = as.numeric(char2dms(repair_dms(lon, NSWE="E"), chd="°", chm = "'", chs = "\"")),
+           lat_dd = as.numeric(char2dms(repair_dms(lat, NSWE="N"), chd="°", chm = "'", chs = "\"")),
+           lon_dms = as.character(char2dms(repair_dms(lon, NSWE="E"), chd="°", chm = "'", chs = "\"")),
+           lat_dms = as.character(char2dms(repair_dms(lat, NSWE="N"), chd="°", chm = "'", chs = "\""))) %>%
     tbl_df()
   gpspoints
 }
@@ -241,7 +243,7 @@ site_centroid <- function(sitedf){
     as.data.frame(
       list(plotName=sitedf[1,]$plotName,
            longitude=sitecen$x,
-           latitude=sitecen$y)))
+           latitude=sitecen$y), stringsAsFactors=F))
   site
 }
 

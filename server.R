@@ -9,12 +9,31 @@ shinyServer(
 
     # Data --------------------------------------------------------------------#
     data <- reactive({
-      if (is.null(input$infile)) return(NULL) else get_data(input$infile)
+      if (is.null(input$infile)) return(NULL)
+      get_data(input$infile)
+    })
+
+    data_sites <- reactive({
+      if (is.null(input$infile_dgps)) return(NULL)
+      get_sites(input$infile_dgps)
+    })
+
+    data_centroids <- reactive({
+      if (is.null(input$infile_dgps)) return(NULL)
+      get_site_centroids(input$infile_dgps)
+    })
+
+    data_site_centroids <- reactive({
+      do <- data()
+      if (is.null(do)) return(NULL)
+      dc <- data_centroids()
+      if (is.null(dc)) return(NULL)
+      left_join(do$sites, dc, by="plotName")
     })
 
     output$siteSelector <- renderUI({
       if (is.null(data())) return(NULL)
-      selectInput("sitepicker", "Show Site", c("All", data()$sites$plotName))
+      selectInput("sitepicker", "Show Site", c("All", data_sites()$plotName))
     })
 
     filteredData <- reactive({
@@ -28,7 +47,8 @@ shinyServer(
     output$table_bw <- make_dt(data()$basal_wedge)
     output$table_vv <- make_dt(data()$vouchered_vegetation)
     output$table_tx <- make_dt(data()$transects)
-    output$table_si <- make_dt(data()$sites)
+    output$table_si <- make_dt(data_site_centroids())
+    output$table_sg <- make_dt(data_sites())
 
     # Map object --------------------------------------------------------------#
     output$map <- renderLeaflet({
@@ -40,21 +60,38 @@ shinyServer(
         addProviderTiles("Esri.WorldImagery",
                          options=providerTileOptions(opacity=0.8)) %>%
         setView(lng = 120, lat = -25, zoom = 5) %>%
-        addMiniMap(toggleDisplay=T) %>%
+        addMiniMap(toggleDisplay=T, zoomLevelOffset=-8) %>%
         clearShapes()
     })
 
     observe({
       d <- data()
       if (is.null(d)) return(NULL)
-      leafletProxy("map", data=data()) %>%
-        clearShapes() %>%
-        addAwesomeMarkers(d$transects_sites$lon,
-                          d$transects_sites$lat,
-                          label=d$transects_sites$name,
-                          popup=d$transects_sites$popup,
+      leafletProxy("map", data=d) %>%
+        addAwesomeMarkers(d$sites$lon,
+                          d$sites$lat,
+                          label=d$sites$plotName,
+                          popup=paste0("<h3>", d$sites$plotName, "</h3>"),
                           clusterOptions=T)
     })
+
+    observe({
+      d <- data_sites()
+      if (is.null(d)) return(NULL)
+      pal <-  colorFactor(palette = "YlGnBu", domain = d, levels=unique(d$plotName))
+      leafletProxy("map", data=data_sites()) %>%
+        addAwesomeMarkers(d$lon_dd,
+                          d$lat_dd,
+                          label=d$plotName,
+                          popup=paste0("<h3>", d$plotName, "</h3>",
+                                       "<p> dGPS point ", d$point, "</p>"),
+                          clusterOptions=T) %>%
+        addLegend("topleft", pal = pal, values = ~d$plotName,
+                  title = "dGPS points",
+                  opacity = 1
+        )
+    })
+
 
     # react to "Show Site"
     observeEvent(input$sitepicker, {
@@ -71,45 +108,38 @@ shinyServer(
 
     # Dataframe to CSV --------------------------------------------------------#
     output$download_sp <- downloadHandler(
-      filename = function() {
-        paste0(input$infile$name, '-site_profiles.csv') },
-      content = function(file) {
-        write.csv(data()$site_profiles, file, row.names = F)}
+      filename = function() {paste0(input$infile$name, '-site_profiles.csv') },
+      content = function(file) {write.csv(data()$site_profiles, file, row.names = F)}
     )
 
     output$download_tp <- downloadHandler(
-      filename = function() {
-        paste0(input$infile$name, '-transect_profiles.csv') },
-      content = function(file) {
-        write.csv(data()$transect_profiles, file, row.names = F)}
+      filename = function() {paste0(input$infile$name, '-transect_profiles.csv') },
+      content = function(file) {write.csv(data()$transect_profiles, file, row.names = F)}
     )
 
     output$download_sr <- downloadHandler(
-      filename = function() {
-        paste0(input$infile$name, '-species_records.csv')},
-      content = function(file) {
-        write.csv(data()$species_records, file, row.names = F)}
+      filename = function() {paste0(input$infile$name, '-species_records.csv')},
+      content = function(file) {write.csv(data()$species_records, file, row.names=F)}
     )
 
     output$download_bw <- downloadHandler(
-      filename = function() {
-        paste0(input$infile$name, '-basal_wedge.csv')},
-      content = function(file) {
-        write.csv(data()$basal_wedge, file, row.names = F)}
+      filename = function() {paste0(input$infile$name, '-basal_wedge.csv')},
+      content = function(file) {write.csv(data()$basal_wedge, file, row.names=F)}
     )
 
     output$download_vv <- downloadHandler(
-      filename = function() {
-        paste0(input$infile$name, '-vouchered_vegetation.csv') },
-      content = function(file) {
-        write.csv(data()$vouchered_vegetation, file, row.names = F)}
+      filename = function() {paste0(input$infile$name, '-vouchered_vegetation.csv')},
+      content = function(file) {write.csv(data()$vouchered_vegetation, file, row.names=F)}
     )
 
     output$download_tx <- downloadHandler(
-      filename = function() {
-        paste0(input$infile$name, '-transects.csv') },
-      content = function(file) {
-        write.csv(data()$transects_sites, file, row.names = F)}
+      filename = function() {paste0(input$infile$name, '-transects.csv')},
+      content = function(file) {write.csv(data()$transects_sites, file, row.names=F)}
+    )
+
+    output$download_sg <- downloadHandler(
+      filename = function() {paste0('dgps_points.csv')},
+      content = function(file) {write.csv(data_sites(), file, row.names=F)}
     )
 
     # Download panel ----------------------------------------------------------#
@@ -123,12 +153,19 @@ shinyServer(
         downloadButton('download_sr', 'Species Records', class=cl),
         downloadButton('download_bw', 'Basal Wedge', class=cl),
         downloadButton('download_vv', 'Vouchered Vegetation', class=cl),
-        downloadButton('download_tx', 'Transects and Sites', class=cl)
+        downloadButton('download_tx', 'Transects and Sites', class=cl),
+        downloadButton('download_sg', 'dGPS Sites', class=cl)
       )
     })
 
-    output$upload <- renderUI({
-      fileInput('infile', multiple=T, label=NULL)
+    output$upload_ausplot <- renderUI({
+      fileInput('infile', multiple=T,
+                label="Upload one or several Ausplot field app .db files")
+    })
+
+    output$upload_dgps <- renderUI({
+      fileInput('infile_dgps', multiple=T,
+                label="Upload one or several dGPS txt files")
     })
 
     output$tx_pca <- renderPlot({
