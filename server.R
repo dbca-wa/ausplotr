@@ -2,6 +2,7 @@ source("global.R")
 library(shiny)
 library(DT)
 library(leaflet)
+library(rgdal)
 library(vegan)
 
 shinyServer(
@@ -23,12 +24,26 @@ shinyServer(
       get_site_centroids(input$infile_dgps)
     })
 
+#     data_polys <- reactive({
+#       if (is.null(input$infile_dgps)) return(NULL)
+#       get_site_polys(input$infile_dgps)
+#     })
+
     data_site_centroids <- reactive({
       do <- data()
       if (is.null(do)) return(NULL)
       dc <- data_centroids()
       if (is.null(dc)) return(NULL)
       left_join(do$sites, dc, by="plotName")
+    })
+
+    site_centroids <- reactive({
+      d <- data_site_centroids()
+      if (is.null(d)) return(NULL)
+      s <- as.data.frame(d[which(!is.null(d$latitude)),])
+      sdf <- select(s, latitude, longitude)
+      wgs84 <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84")
+      pts <- SpatialPointsDataFrame(SpatialPoints(sdf, proj4string=wgs84), s)
     })
 
     output$siteSelector <- renderUI({
@@ -142,6 +157,12 @@ shinyServer(
       content = function(file) {write.csv(data_sites(), file, row.names=F)}
     )
 
+    output$download_sg_gj <- downloadHandler(
+      filename = function() {paste0('dgps_points.geojson')},
+      content = function(file) {
+        writeOGR(site_centroids(), file, 'sites', driver='GeoJSON')}
+    )
+
     # Download panel ----------------------------------------------------------#
     output$download <- renderUI({
       if (is.null(data())) return(NULL)
@@ -154,7 +175,8 @@ shinyServer(
         downloadButton('download_bw', 'Basal Wedge', class=cl),
         downloadButton('download_vv', 'Vouchered Vegetation', class=cl),
         downloadButton('download_tx', 'Transects and Sites', class=cl),
-        downloadButton('download_sg', 'dGPS Sites', class=cl)
+        downloadButton('download_sg', 'dGPS Sites CSV', class=cl),
+        downloadButton('download_sg_gj', 'dGPS Sites GeoJSON', class=cl)
       )
     })
 

@@ -12,6 +12,7 @@ library(shiny)
 library(DT)
 library(sp)
 library(rgeos)
+library(maptools)
 
 #------------------------------------------------------------------------------#
 # Read observations from Ausplot field data app
@@ -265,19 +266,24 @@ get_site_centroids <- function(fup){
       mapply(get_one_site_centroid, fup$name, fup$datapath, SIMPLIFY=F)))
 }
 
-## Create convex hull from points
-# wgs84 <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84")
-# gps.dd.df <- as.data.frame(select(gpspoints, lat_dd, lon_dd))
-# gps.dms.df <- as.data.frame(select(gpspoints, lat_dms, lon_dms))
-# gps.df <- as.data.frame(select(gpspoints, plotName, point, lon_dd, lat_dd,
-#                                lon_dms, lat_dms, easting, northing))
-# sitepol <- gConvexHull(SpatialPoints(gps.dd.df, proj4string=wgs84))
-# sitecen <- gCentroid(SpatialPoints(gps.dd.df, proj4string=wgs84))
-
-# sitesdf <- SpatialPointsDataFrame(SpatialPoints(gps.dd.df, proj4string=wgs84), gps.df)
-# site <- SpatialPointsDataFrame(sitecen, as.data.frame(sitename))
-## Write to GeoJSON
-# writeOGR(site, paste0(n, '.geojson'), 'sites', driver='GeoJSON')
-# writeOGR(sitesdf, paste0(n, '-txpoints.geojson'), 'transectpoints', driver='GeoJSON')
-
-
+#
+# #' Return plotName and centroid lon/lat as tbl_df from a read_one_site tbl_df
+# site_poly <- function(sitedf){
+#   wgs84 <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84")
+#   gps.dd.df <- as.data.frame(select(sitedf, lat_dd, lon_dd))
+#   geom <- gConvexHull(SpatialPoints(gps.dd.df, proj4string=wgs84))
+#   l <- list(geom=geom, name=sitedf[1,]$plotName)
+# }
+#
+# get_one_site_poly <- function(filename, datapath){
+#   site_poly(read_one_site(filename, datapath))
+# }
+# #' Read all dGPS text files into one tbl_df of polygons
+# #'
+# #' Merging SPDFs is a pain, so collect data first, then make SPDF
+# get_site_polys <- function(fup){
+#   pts <- get_sites(fup)
+#   wgs84 <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84")
+#   geoms <- gConvexHull(SpatialPoints(pts, proj4string=wgs84))
+#   SpatialPolygonsDataFrame(geoms, pts)
+# }
