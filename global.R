@@ -1,18 +1,32 @@
 ## Libraries
 # if (!require("pacman")) install.packages("pacman")
-# pacman::p_load("shiny", "readr", "dplyr", "tidyr", "stringr", "lubridate",
-               # "RSQLite", "DT", "markdown", update=F)
+# pacman::p_load("shiny", "RSQLite", "readr", "dplyr", "tidyr", "stringr",
+#                "lubridate", "RSQLite", "DT", "markdown", "rgeos", "rgdal",
+#                "maptools", "vegan", update=T)
 # devtools::install_github('rstudio/leaflet')
+
+# Reading data
 library(RSQLite)
+library(readr)
+
+# Cleaning and munging
 library(tidyr)
 library(dplyr)
-library(readr)
+library(stringr)
 library(lubridate)
+
+# Rendering
 library(shiny)
 library(DT)
+
+# Spatial
 library(sp)
 library(rgeos)
+library(rgdal)
 library(maptools)
+
+# Multivariate analysis
+library(vegan)
 
 #------------------------------------------------------------------------------#
 # Read observations from Ausplot field data app
@@ -138,7 +152,7 @@ get_one_data <- function(filename, datapath){
       left_join(pl_simple, by="plotName")
     # sp[is.na(sp)] <- 0
 
-    d <- list(species_records=sr,
+    list(species_records=sr,
          basal_wedge=bw,
          vouchered_vegetation=vv,
          transects=tx,
@@ -146,7 +160,6 @@ get_one_data <- function(filename, datapath){
          transect_profiles=tp,
          sites=pl,
          site_profiles=sp)
-    d
 }
 
 
@@ -179,7 +192,7 @@ get_data <- function(fup){
 }
 
 #------------------------------------------------------------------------------#
-# Filter observations
+# Filter observations by plotName
 
 #' Filter a dataframe `d` returning rows where column matches value `val`
 filterDf <- function(d, val){filtered <- d[which(d$plotName %in% val),]}
@@ -204,13 +217,63 @@ make_dt <- function(x, filter="top", pageLength=10){
       )))
 }
 
+# Turn a dataframe with latitude/longitude into an sp::SpatialPointsDataFrame
+make_spdf <- function(d){
+  s <- as.data.frame(d[which(!is.null(d$latitude)),])
+  sdf <- select(s, latitude, longitude)
+  wgs84 <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84")
+  SpatialPointsDataFrame(SpatialPoints(sdf, proj4string=wgs84), s)
+}
+
+#' Create a PCA plot from site profiles
+#'
+#' Assumptions:
+#'
+#'  * site_profiles contain species names, all non-species name fields start with
+#'    transect, plot, or are called completionDateTile, lat, lon, txUid
+#'  * abundances are Hellinger-transformed (square root of relative abundances)
+#'  * NAs are treated as 0 - this is probably wrong, as Ausplot transects may
+#'    very well miss an actually present species within a plot, so lack of presence
+#'    (NA in species records) does not prove true absence (0)
+make_pca_plot <- function(site_profiles, selected_sites){
+  Y <- site_profiles %>%
+    dplyr::select(-starts_with("transect"),
+                  -starts_with("plot"),
+                  -starts_with("completionDateTime"),
+                  -starts_with("lat"),
+                  -starts_with("lon"),
+                  -starts_with("txUid"))
+
+  Y[is.na(Y)] <- 0
+
+  tryCatch(
+    # this could get messy with dirty data
+    plt <- vegan::decostand(Y, "hellinger", na.rm=T) %>%
+      rda() %>%
+      plot(type = "t",
+           main="PCA of Hellinger-tf Tx profiles",
+           sub=paste("Selected sites:", selected_sites)),
+    finally = return(NULL)
+  )
+  plt
+}
 
 #------------------------------------------------------------------------------#
 # Sites from dGPS
 
-#' Convert strings like `119.31'8.14"` to `119°31'8.14"`
-repair_dms <- function(dms_string, NSWE="S"){
-  paste0(sub("[.]", "°", dms_string), NSWE)
+#' Parse strings like `119.31'8.14"` to `119°31'8.14"` as numeric or character DMS
+#'
+#' * Assume decimal degree sign is a point (.), minutes is ',seconds are ",
+#'   and orientation (NWSE) is missing
+#' * Repair `119.31'8.14"` to `119°31'8.14"` (sub)
+#' * Insert missing NWSE if given (paste0)
+#' * Parse now correct DMS string to DMS object (char2dms)
+#' * Cast to numeric (decimal degrees) or character (DMS string)
+parse_dms <- function(val, nwse="", fmt="as.numeric"){
+  do.call(fmt,
+          list(char2dms(
+            paste0(sub("[.]", "°", val), nwse),
+            chd="°", chm = "'", chs = "\"")))
 }
 
 #' Read one dGPS file into a SpatialPointsDataFrame of plotName and centroid
@@ -225,65 +288,73 @@ read_one_site <- function(filename, datapath){
     names(read_delim(datapath, skip=2, n_max = 1, delim=" "))[4], "-"," ")
   cols <- c("point","easting","northing","rl", "lat","lon","code","att1","3DCQ")
   gpspoints <- read_csv(datapath, skip=8, col_names=cols) %>%
-    mutate(plotName=pn,
-           lon_dd = as.numeric(char2dms(repair_dms(lon, NSWE="E"), chd="°", chm = "'", chs = "\"")),
-           lat_dd = as.numeric(char2dms(repair_dms(lat, NSWE="N"), chd="°", chm = "'", chs = "\"")),
-           lon_dms = as.character(char2dms(repair_dms(lon, NSWE="E"), chd="°", chm = "'", chs = "\"")),
-           lat_dms = as.character(char2dms(repair_dms(lat, NSWE="N"), chd="°", chm = "'", chs = "\""))) %>%
+    mutate(plotName = pn,
+           lon_dd   = parse_dms(lon, nwse="E", fmt="as.numeric"),
+           lat_dd   = parse_dms(lat, nwse="N", fmt="as.numeric"),
+           lon_dms  = parse_dms(lon, nwse="E", fmt="as.character"),
+           lat_dms  = parse_dms(lat, nwse="N", fmt="as.character")) %>%
     tbl_df()
   gpspoints
 }
+
+#' Read all dGPS text files into one tbl_df
+get_sites <- function(fup){
+  bind_rows(as.list(mapply(read_one_site, fup$name, fup$datapath, SIMPLIFY=F)))
+}
+
+
+#------------------------------------------------------------------------------#
+# Precise site point coordinates from dGPS site centroids
 
 #' Return plotName and centroid lon/lat as tbl_df from a read_one_site tbl_df
 site_centroid <- function(sitedf){
   wgs84 <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84")
   gps.dd.df <- as.data.frame(select(sitedf, lat_dd, lon_dd))
   sitecen <- gCentroid(SpatialPoints(gps.dd.df, proj4string=wgs84))
-  # site <- SpatialPointsDataFrame(sitecen, as.data.frame(list(plotName=pn)))
-  site <- tbl_df(
+  tbl_df(
     as.data.frame(
       list(plotName=sitedf[1,]$plotName,
            longitude=sitecen$x,
            latitude=sitecen$y), stringsAsFactors=F))
-  site
 }
 
 get_one_site_centroid <- function(filename, datapath){
   site_centroid(read_one_site(filename, datapath))
 }
 
-#' Read all dGPS text files into one tbl_df
-get_sites <- function(fup){
-  bind_rows(
-    as.list(
-      mapply(read_one_site, fup$name, fup$datapath, SIMPLIFY=F)))
-}
-
 #' Read all dGPS text files into one tbl_df of centroids
+#'
+#' This works, but doubles up reading data again from scratch
+#' TODO use data from get_sites and batch-calculate centroid
 get_site_centroids <- function(fup){
   bind_rows(
     as.list(
       mapply(get_one_site_centroid, fup$name, fup$datapath, SIMPLIFY=F)))
 }
 
-#
-# #' Return plotName and centroid lon/lat as tbl_df from a read_one_site tbl_df
-# site_poly <- function(sitedf){
-#   wgs84 <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84")
-#   gps.dd.df <- as.data.frame(select(sitedf, lat_dd, lon_dd))
-#   geom <- gConvexHull(SpatialPoints(gps.dd.df, proj4string=wgs84))
-#   l <- list(geom=geom, name=sitedf[1,]$plotName)
-# }
-#
-# get_one_site_poly <- function(filename, datapath){
-#   site_poly(read_one_site(filename, datapath))
-# }
-# #' Read all dGPS text files into one tbl_df of polygons
-# #'
-# #' Merging SPDFs is a pain, so collect data first, then make SPDF
-# get_site_polys <- function(fup){
-#   pts <- get_sites(fup)
-#   wgs84 <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84")
-#   geoms <- gConvexHull(SpatialPoints(pts, proj4string=wgs84))
-#   SpatialPolygonsDataFrame(geoms, pts)
-# }
+#------------------------------------------------------------------------------#
+# Precise site polygons from dGPS site convex hulls
+
+#' Return plotName and chull poly as tbl_df from a read_one_site tbl_df
+site_poly <- function(sitedf){
+  wgs84 <- CRS("+proj=longlat +ellps=WGS84 +datum=WGS84")
+  sitename <- sitedf[1,]$plotName
+  sitecoords.df <- as.data.frame(select(sitedf, lat_dd, lon_dd))
+  conv_hull <- gConvexHull(SpatialPoints(sitecoords.df, proj4string=wgs84))
+  conv_hull@polygons[[1]]@ID <- sitename
+  list(plotName=sitename, geom=conv_hull)
+}
+
+get_one_site_poly <- function(filename, datapath){
+  site_poly(read_one_site(filename, datapath))
+}
+
+#' Read all dGPS text files into one tbl_df of centroids
+#'
+#' FIXME this doesn't work, as combining polygons in R is unneccessarily complicated
+get_site_polys <- function(fup){
+  plist <- mapply(get_one_site_poly, fup$name, fup$datapath, SIMPLIFY=F)
+  spdf <- SpatialPolygonsDataFrame(SpatialPolygons(lapply(pl, "[[", "geom")),
+                                   lapply(pl, "[[", "plotName"))
+
+}
